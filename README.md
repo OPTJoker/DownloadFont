@@ -1,6 +1,8 @@
 # DownloadFont
 苹果官方的下载并添加字体的demo
 
+[摘自唐巧的博客]:<http://blog.devtang.com/2013/08/11/ios-asian-font-download-introduction/>
+
 
 <div class="article-content">
 		
