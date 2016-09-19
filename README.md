@@ -27,11 +27,69 @@
 <h2 id="API__u4ECB_u7ECD"><a href="#API__u4ECB_u7ECD" class="headerlink" title="API 介绍"></a>API 介绍</h2><p>苹果提供的动态下载代码的 <a href="http://developer.apple.com/library/ios/#samplecode/DownloadFont/Listings/DownloadFont_ViewController_m.html" target="_blank" rel="external">Demo 工程</a> 链接在这里。将此 Demo 工程下载下来，即可学习相应 API 的使用。下面我对该工程中相应 API 做简单的介绍。</p>
 <p>假如我们现在要下载娃娃体字体，它的 PostScript 名称为<code>DFWaWaSC-W5</code>。具体的步骤如下：</p>
 <p>1、我们先判断该字体是否已经被下载下来了，代码如下：</p>
-<figure class="highlight objc"><table><tbody><tr><td class="code"><pre><span class="line"></span><br><span class="line">- (<span class="built_in">BOOL</span>)isFontDownloaded:(<span class="built_in">NSString</span> *)fontName {</span><br><span class="line">    <span class="built_in">UIFont</span>* aFont = [<span class="built_in">UIFont</span> fontWithName:fontName size:<span class="number">12.0</span>];</span><br><span class="line">    <span class="keyword">if</span> (aFont &amp;&amp; ([aFont<span class="variable">.fontName</span> compare:fontName] == <span class="built_in">NSOrderedSame</span> </span><br><span class="line">               || [aFont<span class="variable">.familyName</span> compare:fontName] == <span class="built_in">NSOrderedSame</span>)) {</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">YES</span>;</span><br><span class="line">    } <span class="keyword">else</span> {</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    }</span><br><span class="line">}</span><br></pre></td></tr></tbody></table></figure>
+```objc
+- (BOOL)isFontDownloaded:(NSString *)fontName {
+    UIFont* aFont = [UIFont fontWithName:fontName size:12.0];
+    if (aFont && ([aFont.fontName compare:fontName] == NSOrderedSame 
+               || [aFont.familyName compare:fontName] == NSOrderedSame)) {
+        return YES;
+    } else {
+        return NO;
+    }
+}
+```
 <p>2、如果该字体下载过了，则可以直接使用。否则我们需要先准备下载字体 API 需要的一些参数，如下所示：</p>
-<figure class="highlight objc"><table><tbody><tr><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">// 用字体的 PostScript 名字创建一个 Dictionary</span></span><br><span class="line"><span class="built_in">NSMutableDictionary</span> *attrs = [<span class="built_in">NSMutableDictionary</span> dictionaryWithObjectsAndKeys:fontName, kCTFontNameAttribute, <span class="literal">nil</span>];</span><br><span class="line"></span><br><span class="line"><span class="comment">// 创建一个字体描述对象 CTFontDescriptorRef</span></span><br><span class="line">CTFontDescriptorRef desc = CTFontDescriptorCreateWithAttributes((__bridge <span class="built_in">CFDictionaryRef</span>)attrs);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 将字体描述对象放到一个 NSMutableArray 中</span></span><br><span class="line"><span class="built_in">NSMutableArray</span> *descs = [<span class="built_in">NSMutableArray</span> arrayWithCapacity:<span class="number">0</span>];</span><br><span class="line">[descs addObject:(__bridge <span class="keyword">id</span>)desc];</span><br><span class="line"><span class="built_in">CFRelease</span>(desc);</span><br></pre></td></tr></tbody></table></figure>
+```objc
+// 用字体的 PostScript 名字创建一个 Dictionary
+NSMutableDictionary *attrs = [NSMutableDictionary dictionaryWithObjectsAndKeys:fontName, kCTFontNameAttribute, nil];
+
+// 创建一个字体描述对象 CTFontDescriptorRef
+CTFontDescriptorRef desc = CTFontDescriptorCreateWithAttributes((__bridge CFDictionaryRef)attrs);
+
+// 将字体描述对象放到一个 NSMutableArray 中
+NSMutableArray *descs = [NSMutableArray arrayWithCapacity:0];
+[descs addObject:(__bridge id)desc];
+CFRelease(desc);
+```
 <p>3、准备好上面的<code>descs</code>变量后，则可以进行字体的下载了，代码如下：</p>
-<figure class="highlight objc"><table><tbody><tr><td class="code"><pre><span class="line"></span><br><span class="line">__block <span class="built_in">BOOL</span> errorDuringDownload = <span class="literal">NO</span>;</span><br><span class="line"></span><br><span class="line">CTFontDescriptorMatchFontDescriptorsWithProgressHandler( (__bridge <span class="built_in">CFArrayRef</span>)descs, <span class="literal">NULL</span>,  ^(CTFontDescriptorMatchingState state, <span class="built_in">CFDictionaryRef</span> progressParameter) {</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">double</span> progressValue = [[(__bridge <span class="built_in">NSDictionary</span> *)progressParameter objectForKey:(<span class="keyword">id</span>)kCTFontDescriptorMatchingPercentage] doubleValue];</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">if</span> (state == kCTFontDescriptorMatchingDidBegin) {</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@" 字体已经匹配 "</span>);</span><br><span class="line">    } <span class="keyword">else</span> <span class="keyword">if</span> (state == kCTFontDescriptorMatchingDidFinish) {    </span><br><span class="line">        <span class="keyword">if</span> (!errorDuringDownload) {</span><br><span class="line">            <span class="built_in">NSLog</span>(<span class="string">@" 字体 %@ 下载完成 "</span>, fontName);</span><br><span class="line">        }</span><br><span class="line">    } <span class="keyword">else</span> <span class="keyword">if</span> (state == kCTFontDescriptorMatchingWillBeginDownloading) {</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@" 字体开始下载 "</span>);</span><br><span class="line">    } <span class="keyword">else</span> <span class="keyword">if</span> (state == kCTFontDescriptorMatchingDidFinishDownloading) {</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@" 字体下载完成 "</span>);</span><br><span class="line">        <span class="built_in">dispatch_async</span>( dispatch_get_main_queue(), ^ {</span><br><span class="line">            <span class="comment">// 可以在这里修改 UI 控件的字体</span></span><br><span class="line">        });</span><br><span class="line">    } <span class="keyword">else</span> <span class="keyword">if</span> (state == kCTFontDescriptorMatchingDownloading) {</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@" 下载进度 %.0f%% "</span>, progressValue);</span><br><span class="line">    } <span class="keyword">else</span> <span class="keyword">if</span> (state == kCTFontDescriptorMatchingDidFailWithError) {</span><br><span class="line">        <span class="built_in">NSError</span> *error = [(__bridge <span class="built_in">NSDictionary</span> *)progressParameter objectForKey:(<span class="keyword">id</span>)kCTFontDescriptorMatchingError];</span><br><span class="line">        <span class="keyword">if</span> (error != <span class="literal">nil</span>) {</span><br><span class="line">            _errorMessage = [error description];</span><br><span class="line">        } <span class="keyword">else</span> {</span><br><span class="line">            _errorMessage = <span class="string">@"ERROR MESSAGE IS NOT AVAILABLE!"</span>;</span><br><span class="line">        }</span><br><span class="line">        <span class="comment">// 设置标志</span></span><br><span class="line">        errorDuringDownload = <span class="literal">YES</span>;</span><br><span class="line">        <span class="built_in">NSLog</span>(<span class="string">@" 下载错误: %@"</span>, _errorMessage);</span><br><span class="line">    }</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> (<span class="built_in">BOOL</span>)<span class="literal">YES</span>;</span><br><span class="line">});</span><br></pre></td></tr></tbody></table></figure>
+```objc
+__block BOOL errorDuringDownload = NO;
+
+CTFontDescriptorMatchFontDescriptorsWithProgressHandler( (__bridge CFArrayRef)descs, NULL,  ^(CTFontDescriptorMatchingState state, CFDictionaryRef progressParameter) {
+    
+    double progressValue = [[(__bridge NSDictionary *)progressParameter objectForKey:(id)kCTFontDescriptorMatchingPercentage] doubleValue];
+    
+    if (state == kCTFontDescriptorMatchingDidBegin) {
+        NSLog(@" 字体已经匹配 ");
+    } else if (state == kCTFontDescriptorMatchingDidFinish) {    
+        if (!errorDuringDownload) {
+            NSLog(@" 字体 %@ 下载完成 ", fontName);
+        }
+    } else if (state == kCTFontDescriptorMatchingWillBeginDownloading) {
+        NSLog(@" 字体开始下载 ");
+    } else if (state == kCTFontDescriptorMatchingDidFinishDownloading) {
+        NSLog(@" 字体下载完成 ");
+        dispatch_async( dispatch_get_main_queue(), ^ {
+            // 可以在这里修改 UI 控件的字体
+        });
+    } else if (state == kCTFontDescriptorMatchingDownloading) {
+        NSLog(@" 下载进度 %.0f%% ", progressValue);
+    } else if (state == kCTFontDescriptorMatchingDidFailWithError) {
+        NSError *error = [(__bridge NSDictionary *)progressParameter objectForKey:(id)kCTFontDescriptorMatchingError];
+        if (error != nil) {
+            _errorMessage = [error description];
+        } else {
+            _errorMessage = @"ERROR MESSAGE IS NOT AVAILABLE!";
+        }
+        // 设置标志
+        errorDuringDownload = YES;
+        NSLog(@" 下载错误: %@", _errorMessage);
+    }
+    
+    return (BOOL)YES;
+});
+```
+
 <p>通常需要在下载完字体后开始使用字体，一般是将相应代码放到 kCTFontDescriptorMatchingDidFinish 那个条件中做，可以象苹果官网的示例代码上那样，用 GCD 来改 UI 的逻辑，也可以发 Notification 来通知相应的 Controller。</p>
 <p>以下是通过以上示例代码下载下来的娃娃体字体截图：</p>
 <img src="/images/wawati-sample.jpg">
